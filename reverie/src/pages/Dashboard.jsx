@@ -67,6 +67,33 @@ export default function Dashboard() {
   const unrealizedPnl = history.reduce((acc, trade) => acc + (trade.pnl || 0), 0);
   const pnlColor = unrealizedPnl >= 0 ? "var(--color-success)" : "var(--color-danger)";
 
+  const { data: newsData } = useQuery({
+    queryKey: ['cryptoNews'],
+    queryFn: async () => {
+      const res = await fetch("https://api.rss2json.com/v1/api.json?rss_url=https://cointelegraph.com/rss");
+      const data = await res.json();
+      return data.items || [];
+    },
+    refetchInterval: 60000
+  });
+  
+  const newsList = newsData && newsData.length > 0 
+    ? [
+        {
+          source: "Somnia",
+          time: "Latest",
+          title: "Somnia Network Surpasses 1 Million Testnet Transactions as DreamDEX Launches",
+          link: "https://somnia.network"
+        },
+        ...newsData.slice(0, 2).map(item => ({
+          source: "Cointelegraph",
+          time: new Date(item.pubDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+          title: item.title,
+          link: item.link
+        }))
+      ]
+    : mockNews;
+
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--bg-page)", color: "var(--text-primary)" }}>
       {/* Top Navbar */}
@@ -156,14 +183,14 @@ export default function Dashboard() {
               <span style={{ color: "var(--color-success)" }}>▤</span> Market Intelligence
             </div>
             <div style={{ display: "flex", flexDirection: "column", padding: "16px", gap: "16px" }}>
-              {mockNews.map((news, i) => (
-                <div key={i} style={{ display: "flex", flexDirection: "column", gap: "8px", borderBottom: i < mockNews.length -1 ? "1px solid var(--border-light)" : "none", paddingBottom: i < mockNews.length -1 ? "16px" : "0" }}>
+              {newsList.map((news, i) => (
+                <div key={i} style={{ display: "flex", flexDirection: "column", gap: "8px", borderBottom: i < newsList.length -1 ? "1px solid var(--border-light)" : "none", paddingBottom: i < newsList.length -1 ? "16px" : "0" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <span style={{ fontSize: "0.65rem", padding: "2px 6px", background: "var(--bg-inverse)", color: "var(--text-inverse)", borderRadius: "2px" }}>{news.source}</span>
                     <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>{news.time}</span>
                   </div>
                   <div style={{ fontSize: "0.85rem", lineHeight: 1.4 }}>{news.title}</div>
-                  <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", textAlign: "right", cursor: "pointer" }}>Read More →</div>
+                  <a href={news.link || "#"} target="_blank" rel="noopener noreferrer" style={{ fontSize: "0.7rem", color: "var(--text-muted)", textAlign: "right", cursor: "pointer", textDecoration: "none" }}>Read More →</a>
                 </div>
               ))}
             </div>
