@@ -1,37 +1,23 @@
-# Somnia × DreamDEX — Event Contracts Hackathon
+<p align="center">
+  <img src="reverie/public/reverie.png" alt="Reverie Logo" width="300" />
+</p>
 
-> **Hackathon:** [Event Contracts Hackathon on DoraHacks](https://dorahacks.io/hackathon/event-contracts/detail)  
-> **Organizer:** Somnia Network × DreamDEX  
-> **Deadline:** September 8–9, 2026  
-> **Prize Pool:** $5,000 USD (USDso)  
-> **Network:** Somnia Testnet (Chain ID: `50312`)
+# Reverie — DreamDEX Trading Terminal
 
 ---
 
-## 📌 Overview
+## 📖 About the Project
 
-Build the next generation of prediction market experiences on **DreamDEX** — an event contracts platform running on the Somnia high-performance EVM-compatible Layer 1.
+**Reverie** is a two-part project consisting of a **Visual Trading Terminal** and an **Automated Trading Bot**. Built on **DreamDEX** and the high-performance **Somnia Layer 1**, Reverie provides a comprehensive environment for engaging with prediction markets and binary event contracts.
 
-**What we're building:** **Reverie** is a two-part project consisting of a **Visual Trading Terminal** and an **Automated Trading Bot**:
-- **Trading Terminal (Web UI):** Displays real-time price action from Binance side-by-side with live DreamDEX binary markets to help users make informed "Up" or "Down" predictions.
-- **Trading Bot (CLI):** Automates interactions with the Somnia testnet, including:
-  - Faucet claims (tUSDC)
-  - Discovering live binary prediction markets
-  - Placing IOC (Immediate-or-Cancel) taker orders
-  - Minting complete sets for sell-side inventory
-  - Redeeming winning positions from finalized markets
-
----
-
-## 🏆 Judging Criteria
-
-| Criteria | Weight |
-|---|---|
-| Technical Implementation | 25% |
-| Innovation & Originality | 20% |
-| User Experience & Design | 20% |
-| Business & Ecosystem Impact | 20% |
-| Presentation & Demo | 15% |
+### Features
+- **Trading Terminal (Web UI):** A sleek, dark-themed web interface that displays real-time price action from Binance alongside live DreamDEX binary markets. This setup enables users to make informed "Up" or "Down" predictions effortlessly.
+- **Trading Bot (CLI):** A powerful command-line tool that automates critical interactions on the Somnia testnet, including:
+  - Faucet claims (tUSDC) for trading capital.
+  - Discovering live binary prediction markets.
+  - Placing IOC (Immediate-or-Cancel) taker orders.
+  - Minting complete outcome sets for sell-side inventory.
+  - Redeeming winning positions from finalized markets.
 
 ---
 
@@ -111,27 +97,63 @@ DREAMDEX_ENABLE_REDEEM=true
 
 ---
 
-## 🚀 Usage
+## 🎓 Tutorial: Using Reverie
 
-```bash
-# Claim testnet tUSDC (up to 10,000 per call)
-node src/index.js --task dreamdex-faucet
+Here is a step-by-step tutorial on how to use both the Visual Trading Terminal and the Automated Trading Bot.
 
-# List all live binary prediction markets
-node src/index.js --task dreamdex-markets
+### Part 1: Visual Trading Terminal (Web UI)
 
-# Run IOC taker trading bot
-node src/index.js --task dreamdex-trade
+1. **Start the Development Server**
+   Run the following command to start the Web UI locally:
+   ```bash
+   npm run dev
+   ```
+2. **Access the Terminal**
+   Open your browser and navigate to `http://localhost:5173` (or the port specified in your terminal).
+3. **Trade on Markets**
+   - View real-time asset prices (e.g., BTC/USDT) powered by Binance WebSocket streams.
+   - Browse active DreamDEX prediction markets on the right panel.
+   - Click **Buy Up** or **Buy Down** to place your predictions based on the live chart data.
 
-# Redeem winning positions from settled markets
-node src/index.js --task dreamdex-redeem
+### Part 2: Automated Trading Bot (CLI)
 
-# Mint complete sets (1 tUSDC → 1 Up + 1 Down)
-node src/index.js --task dreamdex-mint
+The CLI bot provides a set of tasks to automate your trading strategies. Ensure your `.env` file is configured correctly before running these commands.
 
-# Run full cycle: faucet → trade → redeem
-node src/index.js --task dreamdex
-```
+1. **Fund Your Wallet (Faucet)**
+   Claim testnet tUSDC to use for trading (can be called repeatedly):
+   ```bash
+   node src/index.js --task dreamdex-faucet
+   ```
+
+2. **Discover Live Markets**
+   View a list of all currently active binary prediction markets:
+   ```bash
+   node src/index.js --task dreamdex-markets
+   ```
+
+3. **Run the Trading Bot**
+   Execute the automated IOC taker bot, which will analyze markets and place orders automatically based on the `DREAMDEX_TRADE_SIZE` set in your `.env`:
+   ```bash
+   node src/index.js --task dreamdex-trade
+   ```
+
+4. **Redeem Winning Positions**
+   After markets have settled, redeem any winning outcomes back into tUSDC:
+   ```bash
+   node src/index.js --task dreamdex-redeem
+   ```
+
+5. **Mint Complete Sets**
+   Provide liquidity by minting complete sets (1 tUSDC → 1 Up + 1 Down) to sell on the order book:
+   ```bash
+   node src/index.js --task dreamdex-mint
+   ```
+
+6. **Run the Full Lifecycle**
+   Execute the faucet, trade, and redeem steps continuously in a single run:
+   ```bash
+   node src/index.js --task dreamdex
+   ```
 
 ---
 
@@ -196,31 +218,10 @@ await exchange.trader.faucet();
 
 ---
 
-## 🗓️ Timeline
-
-| Date | Event |
-|---|---|
-| August 18, 2026 | Pre-registration opens |
-| August 25, 2026 | Submission window opens |
-| **September 8–9, 2026** | **Submission deadline** |
-
----
-
-## 📦 Deliverables Checklist
-
-- [ ] Working prototype on Somnia Testnet
-- [ ] Public GitHub repository link
-- [ ] 2–3 minute demo video
-- [ ] (Optional) Presentation deck
-- [ ] (Optional) SDK feedback report
-
----
-
 ## 🔗 Resources
 
 | Resource | Link |
 |---|---|
-| Hackathon Page | https://dorahacks.io/hackathon/event-contracts/detail |
 | DreamDEX Docs | https://docs.dreamdex.io/developers/event-contracts |
 | Recipes / Examples | https://docs.dreamdex.io/developers/event-contracts/recipes |
 | Gotchas | https://docs.dreamdex.io/developers/event-contracts/gotchas |

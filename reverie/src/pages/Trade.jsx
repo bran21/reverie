@@ -30,12 +30,29 @@ const TUSDC_ABI = [
 
 export default function Trade() {
   const { theme, toggleTheme } = useTheme();
-  const { isConnected } = useAccount();
+  const { isConnected, address } = useAccount();
   const { writeContract, isPending } = useWriteContract();
   const [activeAsset, setActiveAsset] = useState("BTC");
   const [interval, setInterval] = useState("5m");
-  const [positions, setPositions] = useState([]);
-  const [history, setHistory] = useState([]);
+  const [positions, setPositions] = useState(() => JSON.parse(localStorage.getItem("reverie_positions")) || []);
+  const [history, setHistory] = useState(() => JSON.parse(localStorage.getItem("reverie_history")) || []);
+  const [txLogs, setTxLogs] = useState(() => JSON.parse(localStorage.getItem("reverie_txLogs")) || []);
+
+  useEffect(() => {
+    localStorage.setItem("reverie_positions", JSON.stringify(positions));
+  }, [positions]);
+
+  useEffect(() => {
+    localStorage.setItem("reverie_history", JSON.stringify(history));
+  }, [history]);
+
+  useEffect(() => {
+    localStorage.setItem("reverie_txLogs", JSON.stringify(txLogs));
+  }, [txLogs]);
+
+  const handleTxLog = (action, hash, wallet) => {
+    setTxLogs(prev => [{ id: hash || Date.now().toString(), hash: hash || "Pending", action, wallet: wallet || address, timestamp: Date.now() }, ...prev]);
+  };
 
   const binanceSymbol = ASSET_TO_BINANCE[activeAsset] || "BTCUSDT";
 
@@ -60,17 +77,20 @@ export default function Trade() {
 
     positions.forEach(pos => {
       if (nowSecs >= pos.expiryTime) {
-        // Resolve Trade
+        // Resolve Trade dynamically based on % move
         const diff = lastPrice - pos.entryPrice;
-        let pnl = 0;
-        let isWin = false;
-        if (pos.side === "UP") {
-          isWin = lastPrice > pos.entryPrice;
-          pnl = isWin ? pos.size * (diff / pos.entryPrice) * 10 : -pos.size; // 10x leverage mock
-        } else {
-          isWin = lastPrice < pos.entryPrice;
-          pnl = isWin ? pos.size * (-diff / pos.entryPrice) * 10 : -pos.size;
+        const pct = diff / pos.entryPrice;
+        
+        let rawPnl = pos.side === "UP" ? pos.size * pct : pos.size * (-pct);
+        const leverage = 10;
+        let pnl = rawPnl * leverage;
+
+        // Prevent losing more than the initial margin (liquidation)
+        if (pnl < -pos.size) {
+          pnl = -pos.size;
         }
+
+        const isWin = pnl >= 0;
 
         settled.push({
           ...pos,
@@ -99,6 +119,10 @@ export default function Trade() {
       abi: TUSDC_ABI,
       functionName: "faucet",
       args: [parseUnits(amount.toFixed(2), 6)],
+    }, {
+      onSuccess(hash) {
+        handleTxLog("Redeem Winnings", hash, address);
+      }
     });
 
     // Optimistically mark as claimed
@@ -112,6 +136,10 @@ export default function Trade() {
       abi: TUSDC_ABI,
       functionName: "faucet",
       args: [parseUnits("10000", 6)],
+    }, {
+      onSuccess(hash) {
+        handleTxLog("Faucet Claim", hash, address);
+      }
     });
   };
 
@@ -130,9 +158,9 @@ export default function Trade() {
           </Link>
           
           <div style={{ display: "flex", gap: "var(--space-lg)", fontFamily: "var(--font-sans)", fontSize: "0.9rem", color: "var(--text-secondary)" }}>
-            <span style={{ color: "var(--color-accent)", cursor: "pointer" }}>Trade</span>
-            <span style={{ cursor: "pointer" }}>Dashboard</span>
-            <span style={{ cursor: "pointer" }}>Portfolio</span>
+            <Link to="/trade" style={{ color: "var(--color-accent)", textDecoration: "none" }}>Trade</Link>
+            <Link to="/dashboard" style={{ color: "inherit", textDecoration: "none" }}>Dashboard</Link>
+            <Link to="/dashboard" style={{ color: "inherit", textDecoration: "none" }}>Portfolio</Link>
             <span style={{ cursor: "pointer" }}>History</span>
           </div>
         </div>
@@ -208,14 +236,14 @@ export default function Trade() {
 
           {/* Positions Panel (30% height) */}
           <div style={{ flex: 3, borderTop: "1px solid var(--border-light)", overflow: "hidden", background: "var(--bg-panel)" }}>
-            <PositionsPanel positions={positions} history={history} currentPrice={lastPrice} onClaim={handleClaim} />
+            <PositionsPanel positions={positions} history={history} txLogs={txLogs} currentPrice={lastPrice} onClaim={handleClaim} />
           </div>
 
         </div>
 
         {/* Right Area (Order Entry / Trade Menu) */}
         <div style={{ overflowY: "auto", background: "var(--bg-panel)" }}>
-          <TradeMenu markets={markets} activeAsset={activeAsset} onTrade={handleAddPosition} />
+          <TradeMenu markets={markets} activeAsset={activeAsset} onTrade={handleAddPosition} onTxLog={handleTxLog} />
         </div>
 
       </div>

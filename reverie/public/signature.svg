@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="300" height="100">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&amp;display=swap');
+      .logo {
+        font-family: 'Dancing Script', cursive;
+        font-size: 64px;
+        font-weight: 700;
+        fill: #1a1a1a;
+      }
+      @media (prefers-color-scheme: dark) {
+        .logo {
+          fill: #f6f5f1;
+        }
+      }
+    </style>
+  </defs>
+  <text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" class="logo">Reverie</text>
+</svg>

@@ -52,7 +52,7 @@ const TUSDC_ABI = [
 // Simulated Vault Address for hackathon demo
 const VAULT_ADDRESS = "0x000000000000000000000000000000000000dEaD";
 
-export default function TradeMenu({ markets, activeAsset, onTrade }) {
+export default function TradeMenu({ markets, activeAsset, onTrade, onTxLog }) {
   const { address, isConnected } = useAccount();
   const { writeContract, isPending } = useWriteContract();
   
@@ -101,6 +101,12 @@ export default function TradeMenu({ markets, activeAsset, onTrade }) {
       abi: TUSDC_ABI,
       functionName: "transfer",
       args: [VAULT_ADDRESS, qtyUnits],
+    }, {
+      onSuccess(hash) {
+        if (onTxLog) {
+          onTxLog(`Trade ${sideName.toUpperCase()} ${activeAsset}-${selectedCadence.toUpperCase()}`, hash, address);
+        }
+      }
     });
 
     // Optimistically record the position for the UI

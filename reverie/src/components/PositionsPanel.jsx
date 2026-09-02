@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { playWinSound, playLossSound } from "../utils/audio.js";
 
-export default function PositionsPanel({ positions = [], history = [], currentPrice = 0, onClaim }) {
+export default function PositionsPanel({ positions = [], history = [], txLogs = [], currentPrice = 0, onClaim }) {
   const [activeTab, setActiveTab] = useState("positions");
   const [now, setNow] = useState(Date.now() / 1000);
   const [hoveredRow, setHoveredRow] = useState(null);
@@ -73,7 +73,13 @@ export default function PositionsPanel({ positions = [], history = [], currentPr
                 
                 // Boost PNL for visual hackathon effect (e.g. leverage effect)
                 const leverage = 10;
-                const pnl = rawPnl * leverage;
+                let pnl = rawPnl * leverage;
+
+                // Prevent losing more than initial margin
+                if (pnl < -pos.size) {
+                  pnl = -pos.size;
+                }
+
                 const roe = (pnl / pos.size) * 100;
                 
                 const isProfit = pnl >= 0;
@@ -191,6 +197,55 @@ export default function PositionsPanel({ positions = [], history = [], currentPr
                         <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>CLAIMED</span>
                       )}
                     </div>
+                  </div>
+                );
+              })
+            )}
+          </>
+        )}
+        {activeTab === "txlog" && (
+          <>
+            <div style={{ display: "flex", padding: "8px var(--space-md)", fontSize: "0.7rem", color: "var(--text-muted)", borderBottom: "1px solid var(--border-light)" }}>
+              <div style={{ flex: 1.5 }}>Action</div>
+              <div style={{ flex: 2 }}>Tx Hash</div>
+              <div style={{ flex: 1.5 }}>Wallet</div>
+              <div style={{ flex: 1, textAlign: "right" }}>Time</div>
+            </div>
+            
+            {txLogs.length === 0 ? (
+              <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", fontSize: "0.8rem", padding: "32px 0" }}>
+                No transactions yet.
+              </div>
+            ) : (
+              txLogs.map(log => {
+                const timeStr = new Date(log.timestamp).toLocaleTimeString();
+                const hashShort = log.hash ? `${log.hash.slice(0, 8)}...${log.hash.slice(-6)}` : "Pending...";
+                const walletShort = log.wallet ? `${log.wallet.slice(0, 6)}...${log.wallet.slice(-4)}` : "Unknown";
+
+                return (
+                  <div 
+                    key={log.id} 
+                    style={{ 
+                      display: "flex", 
+                      padding: "12px var(--space-md)", 
+                      fontSize: "0.8rem", 
+                      borderBottom: "1px solid var(--border-light)", 
+                      alignItems: "center"
+                    }}
+                  >
+                    <div style={{ flex: 1.5, fontWeight: 600 }}>{log.action}</div>
+                    <div style={{ flex: 2, fontFamily: "var(--font-mono)", color: "var(--color-accent)" }}>
+                      <a 
+                        href={`https://shannon-explorer.somnia.network/tx/${log.hash}`} 
+                        target="_blank" 
+                        rel="noreferrer"
+                        style={{ color: "inherit", textDecoration: "none" }}
+                      >
+                        {hashShort}
+                      </a>
+                    </div>
+                    <div style={{ flex: 1.5, fontFamily: "var(--font-mono)", color: "var(--text-secondary)" }}>{walletShort}</div>
+                    <div style={{ flex: 1, textAlign: "right", color: "var(--text-muted)", fontSize: "0.75rem" }}>{timeStr}</div>
                   </div>
                 );
               })
