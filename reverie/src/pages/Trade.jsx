@@ -146,6 +146,20 @@ export default function Trade() {
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--bg-page)", color: "var(--text-primary)" }}>
       
+      {/* Dynamic Backgrounds */}
+      <div style={{
+        position: "fixed", top: 0, left: 0, right: 0, bottom: 0, pointerEvents: "none", zIndex: 0,
+        background: "radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.12) 0%, transparent 70%)",
+        opacity: priceChange > 0 ? 1 : 0,
+        transition: "opacity 1.5s ease"
+      }} />
+      <div style={{
+        position: "fixed", top: 0, left: 0, right: 0, bottom: 0, pointerEvents: "none", zIndex: 0,
+        background: "radial-gradient(circle at 50% 0%, rgba(239, 68, 68, 0.12) 0%, transparent 70%)",
+        opacity: priceChange < 0 ? 1 : 0,
+        transition: "opacity 1.5s ease"
+      }} />
+
       {/* Top Navbar */}
       <header style={{ 
         display: "flex", justifyContent: "space-between", alignItems: "center", 
@@ -159,7 +173,6 @@ export default function Trade() {
           
           <div style={{ display: "flex", gap: "var(--space-lg)", fontFamily: "var(--font-sans)", fontSize: "0.9rem", color: "var(--text-secondary)" }}>
             <Link to="/trade" style={{ color: "var(--color-accent)", textDecoration: "none" }}>Trade</Link>
-            <Link to="/dashboard" style={{ color: "inherit", textDecoration: "none" }}>Dashboard</Link>
             <Link to="/dashboard" style={{ color: "inherit", textDecoration: "none" }}>Portfolio</Link>
             <span style={{ cursor: "pointer" }}>History</span>
           </div>

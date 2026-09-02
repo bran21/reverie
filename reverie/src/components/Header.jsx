@@ -9,7 +9,7 @@ export default function Header({ activeAsset, onAssetChange, isConnected }) {
     <header className="app-header">
       <div className="app-header__brand">
         <span className="app-header__logo">⟡ REVERIE</span>
-        <span className="app-header__tag">DreamDEX Terminal</span>
+        <span className="app-header__tag">Terminal</span>
       </div>
 
       <div className="asset-tabs">

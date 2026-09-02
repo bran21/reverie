@@ -160,7 +160,7 @@ export default function PriceChart({
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
           <div>
             <span style={{ fontSize: "1.2rem", fontWeight: 700 }}>{displaySymbol}</span>
-            <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginLeft: "8px" }}>Binance</span>
+            <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginLeft: "8px" }}>DreamDEX</span>
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>

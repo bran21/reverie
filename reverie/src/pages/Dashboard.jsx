@@ -27,7 +27,7 @@ export default function Dashboard() {
   const { theme, toggleTheme } = useTheme();
   const { isConnected, address } = useAccount();
   const [history, setHistory] = useState([]);
-  
+
   useEffect(() => {
     const saved = localStorage.getItem("reverie_history");
     if (saved) setHistory(JSON.parse(saved));
@@ -57,13 +57,13 @@ export default function Dashboard() {
     enabled: !!address,
     refetchInterval: 5000
   });
-  
+
   // Calculate PNL from history (unrealized or realized)
   // For simplicity, we just mock some stats if they have no balance, else use real.
-  const somiBalance = ethBalanceData || 0; 
+  const somiBalance = ethBalanceData || 0;
   const totalEquity = usdcBalance + somiBalance;
   const availableMargin = usdcBalance;
-  
+
   const unrealizedPnl = history.reduce((acc, trade) => acc + (trade.pnl || 0), 0);
   const pnlColor = unrealizedPnl >= 0 ? "var(--color-success)" : "var(--color-danger)";
 
@@ -76,29 +76,29 @@ export default function Dashboard() {
     },
     refetchInterval: 60000
   });
-  
-  const newsList = newsData && newsData.length > 0 
+
+  const newsList = newsData && newsData.length > 0
     ? [
-        {
-          source: "Somnia",
-          time: "Latest",
-          title: "Somnia Network Surpasses 1 Million Testnet Transactions as DreamDEX Launches",
-          link: "https://somnia.network"
-        },
-        ...newsData.slice(0, 2).map(item => ({
-          source: "Cointelegraph",
-          time: new Date(item.pubDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-          title: item.title,
-          link: item.link
-        }))
-      ]
+      {
+        source: "Somnia",
+        time: "Latest",
+        title: "Somnia Network Surpasses 1 Million Testnet Transactions as DreamDEX Launches",
+        link: "https://somnia.network"
+      },
+      ...newsData.slice(0, 2).map(item => ({
+        source: "Cointelegraph",
+        time: new Date(item.pubDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        title: item.title,
+        link: item.link
+      }))
+    ]
     : mockNews;
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--bg-page)", color: "var(--text-primary)" }}>
       {/* Top Navbar */}
-      <header style={{ 
-        display: "flex", justifyContent: "space-between", alignItems: "center", 
+      <header style={{
+        display: "flex", justifyContent: "space-between", alignItems: "center",
         padding: "var(--space-sm) var(--space-md)", borderBottom: "1px solid var(--border-light)",
         background: "var(--bg-page)"
       }}>
@@ -106,10 +106,9 @@ export default function Dashboard() {
           <Link to="/" className="logo-signature" style={{ display: "flex", alignItems: "center", textDecoration: "none" }}>
             Reverie
           </Link>
-          
+
           <div style={{ display: "flex", gap: "var(--space-lg)", fontFamily: "var(--font-sans)", fontSize: "0.9rem", color: "var(--text-secondary)" }}>
             <Link to="/trade" style={{ color: "inherit", textDecoration: "none" }}>Trade</Link>
-            <Link to="/dashboard" style={{ color: "inherit", textDecoration: "none" }}>Dashboard</Link>
             <Link to="/dashboard" style={{ color: "var(--color-accent)", textDecoration: "none", borderBottom: "2px solid var(--color-accent)", paddingBottom: "16px", marginBottom: "-16px" }}>Portfolio</Link>
             <span style={{ cursor: "pointer" }}>History</span>
           </div>
@@ -125,14 +124,14 @@ export default function Dashboard() {
 
       {/* Main Content */}
       <div style={{ padding: "var(--space-lg)", display: "flex", flexDirection: "column", gap: "var(--space-lg)", maxWidth: "1400px", margin: "0 auto", width: "100%" }}>
-        
+
         {/* Summary Cards */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px" }}>
           {[
-            { label: "Total Equity", value: `$${totalEquity.toLocaleString(undefined, {minimumFractionDigits: 2})}`, sub: "+2.4% (24h)", subColor: "var(--color-success)" },
-            { label: "Available Margin", value: `$${availableMargin.toLocaleString(undefined, {minimumFractionDigits: 2})}` },
+            { label: "Total Equity", value: `$${totalEquity.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, sub: "+2.4% (24h)", subColor: "var(--color-success)" },
+            { label: "Available Margin", value: `$${availableMargin.toLocaleString(undefined, { minimumFractionDigits: 2 })}` },
             { label: "Margin Ratio", value: "Healthy", valueColor: "var(--color-success)", extra: "14.2%" },
-            { label: "Unrealized PNL", value: `${unrealizedPnl >= 0 ? "+" : ""}$${unrealizedPnl.toLocaleString(undefined, {minimumFractionDigits: 2})}`, valueColor: pnlColor }
+            { label: "Unrealized PNL", value: `${unrealizedPnl >= 0 ? "+" : ""}$${unrealizedPnl.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, valueColor: pnlColor }
           ].map((card, i) => (
             <div key={i} style={{ background: "var(--bg-panel)", border: "1px solid var(--border-light)", padding: "16px", display: "flex", flexDirection: "column", gap: "8px" }}>
               <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>{card.label}</div>
@@ -147,7 +146,7 @@ export default function Dashboard() {
 
         {/* 2-Column Layout */}
         <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "16px" }}>
-          
+
           {/* Collateral Table */}
           <div style={{ background: "var(--bg-panel)", border: "1px solid var(--border-light)", display: "flex", flexDirection: "column" }}>
             <div style={{ padding: "16px", borderBottom: "1px solid var(--border-light)", fontWeight: 600 }}>Collateral</div>
@@ -164,12 +163,12 @@ export default function Dashboard() {
               <div key={i} style={{ padding: "16px", display: "flex", fontSize: "0.85rem", alignItems: "center", borderBottom: i < 2 ? "1px solid var(--border-light)" : "none" }}>
                 <div style={{ flex: 2, display: "flex", alignItems: "center", gap: "8px", fontWeight: 500 }}>
                   <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: asset.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.5rem", color: "#fff", fontWeight: "bold" }}>
-                    {asset.symbol.slice(0,3)}
+                    {asset.symbol.slice(0, 3)}
                   </div>
                   {asset.name}
                 </div>
-                <div style={{ flex: 1, textAlign: "right", fontFamily: "var(--font-mono)" }}>{asset.balance.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
-                <div style={{ flex: 1, textAlign: "right", fontFamily: "var(--font-mono)" }}>${(asset.value).toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
+                <div style={{ flex: 1, textAlign: "right", fontFamily: "var(--font-mono)" }}>{asset.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                <div style={{ flex: 1, textAlign: "right", fontFamily: "var(--font-mono)" }}>${(asset.value).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                 <div style={{ flex: 1, textAlign: "right" }}>
                   <Link to="/trade" style={{ color: "var(--color-success)", fontSize: "0.75rem", cursor: "pointer", textDecoration: "none" }}>Trade</Link>
                 </div>
@@ -184,7 +183,7 @@ export default function Dashboard() {
             </div>
             <div style={{ display: "flex", flexDirection: "column", padding: "16px", gap: "16px" }}>
               {newsList.map((news, i) => (
-                <div key={i} style={{ display: "flex", flexDirection: "column", gap: "8px", borderBottom: i < newsList.length -1 ? "1px solid var(--border-light)" : "none", paddingBottom: i < newsList.length -1 ? "16px" : "0" }}>
+                <div key={i} style={{ display: "flex", flexDirection: "column", gap: "8px", borderBottom: i < newsList.length - 1 ? "1px solid var(--border-light)" : "none", paddingBottom: i < newsList.length - 1 ? "16px" : "0" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <span style={{ fontSize: "0.65rem", padding: "2px 6px", background: "var(--bg-inverse)", color: "var(--text-inverse)", borderRadius: "2px" }}>{news.source}</span>
                     <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>{news.time}</span>
@@ -200,10 +199,10 @@ export default function Dashboard() {
         {/* Trade History */}
         <div style={{ background: "var(--bg-panel)", border: "1px solid var(--border-light)", display: "flex", flexDirection: "column" }}>
           <div style={{ display: "flex", gap: "16px", padding: "0 16px", borderBottom: "1px solid var(--border-light)" }}>
-             <div style={{ padding: "12px 0", borderBottom: "2px solid var(--color-success)", color: "var(--color-success)", fontSize: "0.85rem", cursor: "pointer" }}>Trade History</div>
-             <div style={{ padding: "12px 0", color: "var(--text-muted)", fontSize: "0.85rem", cursor: "pointer" }}>Funding Logs</div>
+            <div style={{ padding: "12px 0", borderBottom: "2px solid var(--color-success)", color: "var(--color-success)", fontSize: "0.85rem", cursor: "pointer" }}>Trade History</div>
+            <div style={{ padding: "12px 0", color: "var(--text-muted)", fontSize: "0.85rem", cursor: "pointer" }}>Funding Logs</div>
           </div>
-          
+
           <div style={{ padding: "12px 16px", display: "flex", fontSize: "0.75rem", color: "var(--text-muted)", borderBottom: "1px solid var(--border-light)" }}>
             <div style={{ flex: 1.5 }}>Time</div>
             <div style={{ flex: 1 }}>Market</div>
