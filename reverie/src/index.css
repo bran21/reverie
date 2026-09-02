@@ -1,0 +1,133 @@
+/* ═══════════════════════════════════════════════════════════════
+   REVERIE — Design System (Multi-Theme)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* LIGHT THEME (Default) */
+:root {
+  --bg-page: #f6f5f1;       /* Warm off-white */
+  --bg-panel: #ffffff;      /* Pure white for interaction cards */
+  --bg-inverse: #111111;    
+  
+  --text-primary: #111111;  
+  --text-secondary: #555555;
+  --text-muted: #888888;
+  --text-inverse: #ffffff;  
+
+  --border-light: rgba(0, 0, 0, 0.08);
+  --border-focus: #111111;
+
+  /* Accents */
+  --color-up: #10b981;      
+  --color-down: #ef4444;    
+  --color-accent: #111111;
+
+  /* Typography */
+  --font-serif: "Playfair Display", Georgia, serif;
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 64px;
+  --space-3xl: 96px;
+
+  /* Transitions */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-fast: 150ms var(--ease-out);
+  --transition-normal: 300ms var(--ease-out);
+}
+
+/* DARK THEME */
+[data-theme='dark'] {
+  --bg-page: #0a0a0a;       
+  --bg-panel: #111111;      
+  --bg-inverse: #ffffff;
+  
+  --text-primary: #e5e5e5;  
+  --text-secondary: #a3a3a3;
+  --text-muted: #525252;
+  --text-inverse: #000000;
+
+  --border-light: #262626;
+  --border-focus: #404040;
+
+  --color-up: #00ff66;      
+  --color-down: #ff3366;    
+  --color-accent: #00ff66;
+}
+
+/* ─── Reset & Base ────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--bg-page);
+  color: var(--text-primary);
+  line-height: 1.5;
+  min-height: 100vh;
+  overflow-x: hidden;
+  transition: background-color var(--transition-normal), color var(--transition-normal);
+}
+
+/* ─── Web3 Connect Button ─────────────────────────────────── */
+.btn-connect {
+  background-color: var(--bg-inverse);
+  color: var(--text-inverse);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 8px 16px;
+  border: 1px solid var(--border-focus);
+  cursor: pointer;
+  width: 100%;
+  transition: all var(--transition-fast);
+}
+
+.btn-connect:hover {
+  opacity: 0.9;
+}
+
+.btn-connect--sm {
+  width: auto;
+}
+
+/* ─── Inputs & Panels ─────────────────────────────────────── */
+.panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-light);
+  display: flex;
+  flex-direction: column;
+  transition: background-color var(--transition-normal), border-color var(--transition-normal);
+}
+
+/* ─── Utility ─────────────────────────────────────────────── */
+.text-up { color: var(--color-up); }
+.text-down { color: var(--color-down); }
+.font-mono { font-family: var(--font-mono); }
+
+/* ─── Ticker Animation ────────────────────────────────────── */
+@keyframes ticker {
+  0% { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(-100%, 0, 0); }
+}
+
+.ticker-move {
+  animation: ticker 30s linear infinite;
+}
+.ticker-wrap:hover .ticker-move {
+  animation-play-state: paused;
+}

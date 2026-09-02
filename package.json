@@ -1,0 +1,30 @@
+{
+  "name": "reverie",
+  "version": "1.0.0",
+  "description": "Reverie — Automated DreamDEX trading bot for Somnia Event Contracts Hackathon",
+  "type": "module",
+  "scripts": {
+    "faucet": "node src/index.js --task dreamdex-faucet",
+    "markets": "node src/index.js --task dreamdex-markets",
+    "trade": "node src/index.js --task dreamdex-trade",
+    "redeem": "node src/index.js --task dreamdex-redeem",
+    "mint": "node src/index.js --task dreamdex-mint",
+    "dreamdex": "node src/index.js --task dreamdex"
+  },
+  "dependencies": {
+    "@somnia-chain/markets-sdk": "^0.28.0",
+    "dotenv": "^16.4.5",
+    "viem": "^2.21.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "dreamdex",
+    "somnia",
+    "event-contracts",
+    "prediction-market",
+    "trading-bot"
+  ],
+  "license": "MIT"
+}
