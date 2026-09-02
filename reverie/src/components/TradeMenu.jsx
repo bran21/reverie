@@ -111,6 +111,7 @@ export default function TradeMenu({ markets, activeAsset, onTrade }) {
         side: sideName.toUpperCase(),
         size: parseFloat(size),
         entryPrice: activeMarket?.currentPrice || 0,
+        expiryTime: activeMarket?.windowEnd || (Date.now() / 1000) + 300,
         timestamp: Date.now(),
       });
     }
@@ -155,8 +156,11 @@ export default function TradeMenu({ markets, activeAsset, onTrade }) {
           </div>
         </div>
 
-        <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)", lineHeight: 1.4, padding: "8px", background: "var(--bg-page)", border: "1px dashed var(--border-focus)" }}>
-          {activeMarket.question}
+        <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)", lineHeight: 1.4, padding: "8px", background: "var(--bg-page)", border: "1px dashed var(--border-focus)", display: "flex", flexDirection: "column", gap: "4px" }}>
+          <span>{activeMarket.question}</span>
+          <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
+            Opening Price: ${activeMarket.openPrice ? activeMarket.openPrice.toFixed(2) : "Loading..."}
+          </span>
         </div>
 
         {/* Probabilities */}

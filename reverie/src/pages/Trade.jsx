@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useWriteContract, useAccount } from "wagmi";
 import { parseUnits } from "viem";
@@ -35,6 +35,7 @@ export default function Trade() {
   const [activeAsset, setActiveAsset] = useState("BTC");
   const [interval, setInterval] = useState("5m");
   const [positions, setPositions] = useState([]);
+  const [history, setHistory] = useState([]);
 
   const binanceSymbol = ASSET_TO_BINANCE[activeAsset] || "BTCUSDT";
 
@@ -47,6 +48,61 @@ export default function Trade() {
 
   const handleAddPosition = (pos) => {
     setPositions(prev => [...prev, pos]);
+  };
+
+  // Simulated Settlement Engine
+  useEffect(() => {
+    if (positions.length === 0 || !lastPrice) return;
+    
+    const nowSecs = Date.now() / 1000;
+    const active = [];
+    const settled = [];
+
+    positions.forEach(pos => {
+      if (nowSecs >= pos.expiryTime) {
+        // Resolve Trade
+        const diff = lastPrice - pos.entryPrice;
+        let pnl = 0;
+        let isWin = false;
+        if (pos.side === "UP") {
+          isWin = lastPrice > pos.entryPrice;
+          pnl = isWin ? pos.size * (diff / pos.entryPrice) * 10 : -pos.size; // 10x leverage mock
+        } else {
+          isWin = lastPrice < pos.entryPrice;
+          pnl = isWin ? pos.size * (-diff / pos.entryPrice) * 10 : -pos.size;
+        }
+
+        settled.push({
+          ...pos,
+          settlementPrice: lastPrice,
+          pnl,
+          isWin,
+          settledAt: Date.now()
+        });
+      } else {
+        active.push(pos);
+      }
+    });
+
+    if (settled.length > 0) {
+      setPositions(active);
+      setHistory(prev => [...settled, ...prev]);
+    }
+  }, [positions, lastPrice]);
+
+  const handleClaim = (posId, amount) => {
+    if (!isConnected) return;
+    
+    // MOCK: We use the faucet to mint the winnings back to the user!
+    writeContract({
+      address: TUSDC_ADDRESS,
+      abi: TUSDC_ABI,
+      functionName: "faucet",
+      args: [parseUnits(amount.toFixed(2), 6)],
+    });
+
+    // Optimistically mark as claimed
+    setHistory(prev => prev.map(p => p.id === posId ? { ...p, isClaimed: true } : p));
   };
 
   const handleFaucet = () => {
@@ -152,7 +208,7 @@ export default function Trade() {
 
           {/* Positions Panel (30% height) */}
           <div style={{ flex: 3, borderTop: "1px solid var(--border-light)", overflow: "hidden", background: "var(--bg-panel)" }}>
-            <PositionsPanel positions={positions} currentPrice={lastPrice} />
+            <PositionsPanel positions={positions} history={history} currentPrice={lastPrice} onClaim={handleClaim} />
           </div>
 
         </div>
