@@ -205,11 +205,19 @@ export default function Trade() {
           <select 
             value={activeAsset} 
             onChange={(e) => setActiveAsset(e.target.value)}
-            style={{ background: "transparent", border: "none", color: "var(--text-primary)", fontSize: "1.1rem", fontWeight: 700, outline: "none", cursor: "pointer" }}
+            style={{ 
+              background: "transparent", 
+              border: "none", 
+              color: priceChange >= 0 ? "var(--color-up, #10b981)" : "var(--color-down, #ef4444)", 
+              fontSize: "1.1rem", 
+              fontWeight: 700, 
+              outline: "none", 
+              cursor: "pointer" 
+            }}
           >
-            <option value="BTC">BTC/USDT</option>
-            <option value="ETH">ETH/USDT</option>
-            <option value="SOL">SOL/USDT</option>
+            <option value="BTC" style={{ background: "var(--bg-panel)", color: "var(--text-primary)" }}>BTC/USDT</option>
+            <option value="ETH" style={{ background: "var(--bg-panel)", color: "var(--text-primary)" }}>ETH/USDT</option>
+            <option value="SOL" style={{ background: "var(--bg-panel)", color: "var(--text-primary)" }}>SOL/USDT</option>
           </select>
           <span style={{ fontSize: "0.7rem", padding: "2px 4px", border: "1px solid var(--border-focus)", color: "var(--color-accent)" }}>Event</span>
         </div>
@@ -275,9 +283,9 @@ export default function Trade() {
           onClick={() => setMemeMode(!memeMode)}
           style={{
             background: "transparent",
-            color: memeMode ? "var(--color-accent)" : "var(--text-muted)",
+            color: memeMode ? (priceChange >= 0 ? "var(--color-up, #10b981)" : "var(--color-down, #ef4444)") : "var(--text-muted)",
             border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px",
-            opacity: 0.6, fontFamily: "var(--font-mono)"
+            opacity: 0.8, fontFamily: "var(--font-mono)"
           }}
           title="Warning: Highly volatile visual experience"
         >
