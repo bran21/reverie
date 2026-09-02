@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
-import { useWriteContract, useAccount } from "wagmi";
-import { parseUnits } from "viem";
+import { useWriteContract, useReadContract, useAccount } from "wagmi";
+import { parseUnits, formatUnits } from "viem";
 
-const CONTRACT_ADDRESS = "0x3ecC694Cef705358864a646142ac17A90E29e388";
+const CONTRACT_ADDRESS = "0x3ecC694Cef705358864a646142ac17A90E29e388"; // BinaryMarketsModule
+const TUSDC_ADDRESS = "0x70a86D8842FB63C4Ad2b7cdddF530eBf1BB25d8E";
+
 const BINARY_MARKETS_MODULE_ABI = [
   {
     inputs: [
@@ -20,49 +22,98 @@ const BINARY_MARKETS_MODULE_ABI = [
   }
 ];
 
-export default function TradeMenu({ markets, activeAsset }) {
-  const { isConnected } = useAccount();
+const TUSDC_ABI = [
+  {
+    inputs: [{ internalType: "address", name: "account", type: "address" }],
+    name: "balanceOf",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [{ internalType: "uint256", name: "amount", type: "uint256" }],
+    name: "faucet",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
+    inputs: [
+      { internalType: "address", name: "to", type: "address" },
+      { internalType: "uint256", name: "amount", type: "uint256" }
+    ],
+    name: "transfer",
+    outputs: [{ internalType: "bool", name: "", type: "bool" }],
+    stateMutability: "nonpayable",
+    type: "function"
+  }
+];
+
+// Simulated Vault Address for hackathon demo
+const VAULT_ADDRESS = "0x000000000000000000000000000000000000dEaD";
+
+export default function TradeMenu({ markets, activeAsset, onTrade }) {
+  const { address, isConnected } = useAccount();
   const { writeContract, isPending } = useWriteContract();
   
+  // Fetch Balance
+  const { data: balanceData, refetch: refetchBalance } = useReadContract({
+    address: TUSDC_ADDRESS,
+    abi: TUSDC_ABI,
+    functionName: "balanceOf",
+    args: [address],
+    query: {
+      enabled: !!address,
+      refetchInterval: 5000
+    }
+  });
+
   const [selectedCadence, setSelectedCadence] = useState("5m");
   const [size, setSize] = useState("10.0"); 
 
   const activeMarket = markets.find(m => m.cadence === selectedCadence) || markets[0];
   
-  const [remaining, setRemaining] = useState(activeMarket ? activeMarket.remaining : 0);
-
-  useEffect(() => {
-    if (!activeMarket) return;
-    setRemaining(activeMarket.remaining);
-    const timer = setInterval(() => {
-      setRemaining((r) => Math.max(0, r - 1));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [activeMarket]);
-
   if (!activeMarket) return null;
 
+  const remaining = activeMarket.remaining || 0;
   const mins = Math.floor(remaining / 60);
   const secs = Math.floor(remaining % 60);
   const timeStr = `${mins}:${secs.toString().padStart(2, "0")}`;
-  const isTrading = activeMarket.status === "Trading";
+  const isTrading = activeMarket?.status === "Trading";
+
+  const formattedBalance = balanceData !== undefined 
+    ? Number(formatUnits(balanceData, 6)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : "0.00";
 
   const handleTrade = (sideName) => {
     if (!isConnected) {
       alert("Please connect your wallet first.");
       return;
     }
-    const sideEnum = sideName === "up" ? 0 : 1; 
-    const price = sideName === "up" ? activeMarket.bestAsk : 1 - activeMarket.bestBid;
-    const priceUnits = parseUnits(price.toString(), 6);
+    
+    // For the hackathon demo, we simulate the complex DreamDEX EIP-712 order placement 
+    // by triggering a real on-chain transfer of the collateral (tUSDC) to a Vault.
+    // This pops MetaMask, executes on Somnia, and decreases the user's balance!
     const qtyUnits = parseUnits(size.toString(), 6);
 
     writeContract({
-      address: CONTRACT_ADDRESS,
-      abi: BINARY_MARKETS_MODULE_ABI,
-      functionName: "createOrder",
-      args: [activeMarket.id, 0, sideEnum, qtyUnits, priceUnits, 2],
+      address: TUSDC_ADDRESS,
+      abi: TUSDC_ABI,
+      functionName: "transfer",
+      args: [VAULT_ADDRESS, qtyUnits],
     });
+
+    // Optimistically record the position for the UI
+    if (onTrade) {
+      onTrade({
+        id: Math.random().toString(36).substr(2, 9),
+        symbol: `${activeAsset}-${selectedCadence.toUpperCase()}`,
+        side: sideName.toUpperCase(),
+        size: parseFloat(size),
+        entryPrice: activeMarket?.currentPrice || 0,
+        timestamp: Date.now(),
+      });
+    }
   };
 
   return (
@@ -122,9 +173,13 @@ export default function TradeMenu({ markets, activeAsset }) {
 
         {/* Size Input */}
         <div>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px", alignItems: "center" }}>
             <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>Size</span>
-            <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>Avail: 0.00 tUSDC</span>
+            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+              <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
+                Avail: {formattedBalance} tUSDC
+              </span>
+            </div>
           </div>
           <div style={{ display: "flex", background: "var(--bg-page)", border: "1px solid var(--border-light)", padding: "8px 12px", alignItems: "center" }}>
             <input 

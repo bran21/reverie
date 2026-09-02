@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useWriteContract, useAccount } from "wagmi";
+import { parseUnits } from "viem";
 import ConnectButton from "../components/ConnectButton.jsx";
 import PriceChart from "../components/PriceChart.jsx";
 import TradeMenu from "../components/TradeMenu.jsx";
@@ -15,19 +17,47 @@ const ASSET_TO_BINANCE = {
   SOL: "SOLUSDT",
 };
 
+const TUSDC_ADDRESS = "0x70a86D8842FB63C4Ad2b7cdddF530eBf1BB25d8E";
+const TUSDC_ABI = [
+  {
+    inputs: [{ internalType: "uint256", name: "amount", type: "uint256" }],
+    name: "faucet",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  }
+];
+
 export default function Trade() {
   const { theme, toggleTheme } = useTheme();
+  const { isConnected } = useAccount();
+  const { writeContract, isPending } = useWriteContract();
   const [activeAsset, setActiveAsset] = useState("BTC");
   const [interval, setInterval] = useState("5m");
+  const [positions, setPositions] = useState([]);
 
   const binanceSymbol = ASSET_TO_BINANCE[activeAsset] || "BTCUSDT";
 
-  const { candles, lastPrice, priceChange, isConnected } = useBinanceStream(
+  const { candles, lastPrice, priceChange } = useBinanceStream(
     binanceSymbol,
     interval
   );
 
   const { markets } = useDreamDexMarkets(lastPrice, candles, activeAsset);
+
+  const handleAddPosition = (pos) => {
+    setPositions(prev => [...prev, pos]);
+  };
+
+  const handleFaucet = () => {
+    if (!isConnected) return;
+    writeContract({
+      address: TUSDC_ADDRESS,
+      abi: TUSDC_ABI,
+      functionName: "faucet",
+      args: [parseUnits("10000", 6)],
+    });
+  };
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--bg-page)", color: "var(--text-primary)" }}>
@@ -39,8 +69,8 @@ export default function Trade() {
         background: "var(--bg-page)"
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-xl)" }}>
-          <Link to="/" style={{ fontFamily: "var(--font-mono)", fontSize: "1.2rem", fontWeight: 700, color: "var(--color-accent)", textDecoration: "none" }}>
-            REVERIE_TRADE
+          <Link to="/" className="logo-signature" style={{ display: "flex", alignItems: "center", textDecoration: "none" }}>
+            Reverie
           </Link>
           
           <div style={{ display: "flex", gap: "var(--space-lg)", fontFamily: "var(--font-sans)", fontSize: "0.9rem", color: "var(--text-secondary)" }}>
@@ -52,6 +82,15 @@ export default function Trade() {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-md)" }}>
+          {isConnected && (
+            <button 
+              onClick={handleFaucet} 
+              disabled={isPending}
+              style={{ background: "var(--color-accent)", color: "#000", border: "none", cursor: "pointer", padding: "6px 12px", fontSize: "0.8rem", fontWeight: 700, borderRadius: "2px", opacity: isPending ? 0.5 : 1 }}
+            >
+              + FAUCET
+            </button>
+          )}
           <button onClick={toggleTheme} style={{ background: "transparent", border: "1px solid var(--border-light)", color: "var(--text-primary)", cursor: "pointer", padding: "4px 8px", fontSize: "0.75rem", fontFamily: "var(--font-mono)" }}>
             {theme === "dark" ? "☀️ Light" : "🌙 Dark"}
           </button>
@@ -113,14 +152,14 @@ export default function Trade() {
 
           {/* Positions Panel (30% height) */}
           <div style={{ flex: 3, borderTop: "1px solid var(--border-light)", overflow: "hidden", background: "var(--bg-panel)" }}>
-            <PositionsPanel />
+            <PositionsPanel positions={positions} currentPrice={lastPrice} />
           </div>
 
         </div>
 
         {/* Right Area (Order Entry / Trade Menu) */}
         <div style={{ overflowY: "auto", background: "var(--bg-panel)" }}>
-          <TradeMenu markets={markets} activeAsset={activeAsset} />
+          <TradeMenu markets={markets} activeAsset={activeAsset} onTrade={handleAddPosition} />
         </div>
 
       </div>

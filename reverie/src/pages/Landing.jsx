@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import ConnectButton from "../components/ConnectButton.jsx";
 import NewsTicker from "../components/NewsTicker.jsx";
 import { useTheme } from "../hooks/useTheme.js";
 
@@ -13,14 +12,17 @@ export default function Landing() {
         display: "flex", justifyContent: "space-between", alignItems: "center", 
         padding: "var(--space-md) var(--space-xl)", borderBottom: "1px solid var(--border-light)"
       }}>
-        <div style={{ fontFamily: "var(--font-mono)", fontSize: "1.2rem", fontWeight: 700, color: "var(--color-accent)" }}>
-          REVERIE_TERMINAL
+        <div className="logo-signature" style={{ display: "flex", alignItems: "center" }}>
+          Reverie
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "16px", fontSize: "0.75rem", fontFamily: "var(--font-mono)", color: "var(--text-secondary)" }}>
           <button onClick={toggleTheme} style={{ background: "transparent", border: "1px solid var(--border-light)", color: "var(--text-primary)", cursor: "pointer", padding: "4px 8px" }}>
             {theme === "dark" ? "☀️ Light" : "🌙 Dark"}
           </button>
-          <span style={{ color: "var(--color-accent)" }}>(●) System Operational</span>
+          <span style={{ color: "var(--color-accent)", display: "flex", alignItems: "center" }}>(●) System Operational</span>
+          <Link to="/trade" className="btn-connect" style={{ width: "auto", textDecoration: "none", marginLeft: "16px" }}>
+            ENTER TERMINAL
+          </Link>
         </div>
       </header>
 
@@ -36,26 +38,9 @@ export default function Landing() {
           <span style={{ color: "var(--color-accent)" }}>Optimized for Speed.</span>
         </h1>
 
-        <p style={{ color: "var(--text-secondary)", textAlign: "center", maxWidth: "600px", fontSize: "1.1rem", marginBottom: "var(--space-2xl)" }}>
-          Connect your wallet to access deep liquidity, high-leverage prediction markets, and sub-millisecond execution times on Somnia.
+        <p style={{ color: "var(--text-secondary)", textAlign: "center", maxWidth: "600px", fontSize: "1.1rem", marginBottom: "var(--space-3xl)" }}>
+          Access deep liquidity, high-leverage prediction markets, and sub-millisecond execution times on Somnia.
         </p>
-
-        {/* Connect Box */}
-        <div className="panel" style={{ width: "100%", maxWidth: "400px", padding: "var(--space-xl)", gap: "var(--space-md)", alignItems: "center", marginBottom: "var(--space-3xl)" }}>
-          <div style={{ fontSize: "1.2rem", fontWeight: 600, marginBottom: "var(--space-sm)", display: "flex", alignItems: "center", gap: "8px" }}>
-            <span style={{ color: "var(--color-accent)" }}>[]</span> Connect Wallet
-          </div>
-          
-          <ConnectButton />
-          
-          <Link to="/trade" className="btn-connect" style={{ display: "block", textAlign: "center", textDecoration: "none" }}>
-            ENTER TERMINAL
-          </Link>
-
-          <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: "var(--space-md)", textAlign: "center" }}>
-            By connecting, you agree to the Terms of Service
-          </div>
-        </div>
 
         {/* Features Grid */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "var(--space-lg)", width: "100%", maxWidth: "1000px" }}>
