@@ -24,6 +24,7 @@ export default function PriceChart({
   interval,
   onIntervalChange,
   theme,
+  memeMode,
 }) {
   const chartContainerRef = useRef(null);
   const chartRef = useRef(null);
@@ -146,7 +147,24 @@ export default function PriceChart({
 
     seriesRef.current.setData(candleData);
     volumeSeriesRef.current.setData(volumeData);
-  }, [candles]);
+
+    if (memeMode) {
+      const markers = candles.map((c) => {
+        const isGreen = c.close >= c.open;
+        return {
+          time: c.time,
+          position: isGreen ? 'aboveBar' : 'belowBar',
+          color: isGreen ? '#10b981' : '#ef4444',
+          shape: isGreen ? 'arrowUp' : 'arrowDown',
+          text: isGreen ? '🚀' : '😭',
+          size: 2,
+        };
+      });
+      seriesRef.current.setMarkers(markers);
+    } else {
+      seriesRef.current.setMarkers([]);
+    }
+  }, [candles, memeMode]);
 
   const pair = symbol || "BTCUSDT";
   const displaySymbol = pair.replace("USDT", "/USDT");
@@ -158,9 +176,11 @@ export default function PriceChart({
         
         {/* Chart Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-          <div>
-            <span style={{ fontSize: "1.2rem", fontWeight: 700 }}>{displaySymbol}</span>
-            <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginLeft: "8px" }}>DreamDEX</span>
+          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+            <div>
+              <span style={{ fontSize: "1.2rem", fontWeight: 700 }}>{displaySymbol}</span>
+              <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginLeft: "8px" }}>DreamDEX</span>
+            </div>
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>

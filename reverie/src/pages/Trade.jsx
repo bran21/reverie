@@ -7,6 +7,7 @@ import PriceChart from "../components/PriceChart.jsx";
 import TradeMenu from "../components/TradeMenu.jsx";
 import PositionsPanel from "../components/PositionsPanel.jsx";
 import NewsTicker from "../components/NewsTicker.jsx";
+import Jumpscare from "../components/Jumpscare.jsx";
 import { useBinanceStream } from "../hooks/useBinanceStream.js";
 import { useDreamDexMarkets } from "../hooks/useDreamDexMarkets.js";
 import { useTheme } from "../hooks/useTheme.js";
@@ -37,6 +38,7 @@ export default function Trade() {
   const [positions, setPositions] = useState(() => JSON.parse(localStorage.getItem("reverie_positions")) || []);
   const [history, setHistory] = useState(() => JSON.parse(localStorage.getItem("reverie_history")) || []);
   const [txLogs, setTxLogs] = useState(() => JSON.parse(localStorage.getItem("reverie_txLogs")) || []);
+  const [memeMode, setMemeMode] = useState(false);
 
   useEffect(() => {
     localStorage.setItem("reverie_positions", JSON.stringify(positions));
@@ -160,6 +162,8 @@ export default function Trade() {
         transition: "opacity 1.5s ease"
       }} />
 
+      <Jumpscare candles={candles} />
+
       {/* Top Navbar */}
       <header style={{ 
         display: "flex", justifyContent: "space-between", alignItems: "center", 
@@ -243,6 +247,7 @@ export default function Trade() {
                 interval={interval}
                 onIntervalChange={setInterval}
                 theme={theme}
+                memeMode={memeMode}
               />
             </div>
           </div>
@@ -258,8 +263,27 @@ export default function Trade() {
         <div style={{ overflowY: "auto", background: "var(--bg-panel)" }}>
           <TradeMenu markets={markets} activeAsset={activeAsset} onTrade={handleAddPosition} onTxLog={handleTxLog} />
         </div>
-
       </div>
+
+      {/* Easter Egg Footer */}
+      <footer style={{ 
+        display: "flex", justifyContent: "flex-end", padding: "4px 16px", 
+        background: "var(--bg-panel)", borderTop: "1px solid var(--border-light)",
+        fontSize: "0.75rem", alignItems: "center"
+      }}>
+        <button 
+          onClick={() => setMemeMode(!memeMode)}
+          style={{
+            background: "transparent",
+            color: memeMode ? "var(--color-accent)" : "var(--text-muted)",
+            border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px",
+            opacity: 0.6, fontFamily: "var(--font-mono)"
+          }}
+          title="Warning: Highly volatile visual experience"
+        >
+          ⚠️ {memeMode ? "MEME ON" : "MEME OFF"}
+        </button>
+      </footer>
     </div>
   );
 }
