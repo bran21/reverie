@@ -24,7 +24,6 @@ export default function PriceChart({
   interval,
   onIntervalChange,
   theme,
-  memeMode,
 }) {
   const chartContainerRef = useRef(null);
   const chartRef = useRef(null);
@@ -129,7 +128,13 @@ export default function PriceChart({
 
   // Update data when candles change
   useEffect(() => {
-    if (!seriesRef.current || !volumeSeriesRef.current || candles.length === 0) return;
+    if (!seriesRef.current || !volumeSeriesRef.current) return;
+
+    if (candles.length === 0) {
+      seriesRef.current.setData([]);
+      volumeSeriesRef.current.setData([]);
+      return;
+    }
 
     const candleData = candles.map((c) => ({
       time: c.time,
@@ -147,24 +152,8 @@ export default function PriceChart({
 
     seriesRef.current.setData(candleData);
     volumeSeriesRef.current.setData(volumeData);
-
-    if (memeMode) {
-      const markers = candles.map((c) => {
-        const isGreen = c.close >= c.open;
-        return {
-          time: c.time,
-          position: isGreen ? 'aboveBar' : 'belowBar',
-          color: isGreen ? '#10b981' : '#ef4444',
-          shape: isGreen ? 'arrowUp' : 'arrowDown',
-          text: isGreen ? '🚀' : '😭',
-          size: 2,
-        };
-      });
-      seriesRef.current.setMarkers(markers);
-    } else {
-      seriesRef.current.setMarkers([]);
-    }
-  }, [candles, memeMode]);
+    seriesRef.current.setMarkers([]);
+  }, [candles]);
 
   const pair = symbol || "BTCUSDT";
   const displaySymbol = pair.replace("USDT", "/USDT");

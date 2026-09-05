@@ -16,7 +16,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
 const WS_BASE = "wss://stream.binance.com:9443/ws";
-const REST_BASE = "https://api.binance.com/api/v3/klines";
+const REST_BASE = "https://data-api.binance.vision/api/v3/klines";
 
 /**
  * Transform Binance REST kline array into lightweight-charts format.
@@ -61,6 +61,9 @@ export function useBinanceStream(symbol = "BTCUSDT", interval = "1m") {
 
   // Fetch historical candles on mount / symbol change
   const fetchHistory = useCallback(async () => {
+    // Clear old candles immediately when symbol/interval changes
+    setCandles([]);
+    setLastPrice(null);
     try {
       const url = `${REST_BASE}?symbol=${symbol.toUpperCase()}&interval=${interval}&limit=300`;
       const res = await fetch(url);
@@ -95,6 +98,7 @@ export function useBinanceStream(symbol = "BTCUSDT", interval = "1m") {
     };
 
     ws.onmessage = (event) => {
+      if (wsRef.current !== ws) return;
       try {
         const msg = JSON.parse(event.data);
         if (msg.e !== "kline") return;
@@ -127,12 +131,13 @@ export function useBinanceStream(symbol = "BTCUSDT", interval = "1m") {
     };
 
     ws.onclose = () => {
+      if (wsRef.current !== ws) return;
       setIsConnected(false);
-      // Auto-reconnect after 3 seconds
       reconnectTimer.current = setTimeout(connect, 3000);
     };
 
     ws.onerror = () => {
+      if (wsRef.current !== ws) return;
       ws.close();
     };
   }, [symbol, interval]);

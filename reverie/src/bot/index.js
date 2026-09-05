@@ -24,6 +24,8 @@ import { runMarkets } from "./tasks/dreamdex-markets.js";
 import { runTrade } from "./tasks/dreamdex-trade.js";
 import { runRedeem } from "./tasks/dreamdex-redeem.js";
 import { runMint } from "./tasks/dreamdex-mint.js";
+import { runCreateMarkets } from "./tasks/dreamdex-create-markets.js";
+import { runMarketMaker } from "./tasks/dreamdex-market-maker.js";
 import {
   ENABLE_FAUCET,
   ENABLE_TRADE,
@@ -54,6 +56,8 @@ async function main() {
     console.log("  dreamdex-trade    — IOC taker trading bot");
     console.log("  dreamdex-redeem   — Redeem winning positions");
     console.log("  dreamdex-mint     — Mint complete sets");
+    console.log("  dreamdex-market-maker — Dynamic CLOB Market Maker bot");
+    console.log("  dreamdex-create-markets — Create custom prediction markets");
     console.log("  dreamdex          — Full cycle: faucet → trade → redeem");
     process.exit(0);
   }
@@ -81,6 +85,14 @@ async function main() {
 
     case "dreamdex-mint":
       await runMint();
+      break;
+
+    case "dreamdex-market-maker":
+      await runMarketMaker();
+      break;
+
+    case "dreamdex-create-markets":
+      await runCreateMarkets();
       break;
 
     case "dreamdex":

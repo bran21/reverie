@@ -11,7 +11,7 @@ import "dotenv/config";
 export const SOMNIA_RPC_URL = process.env.SOMNIA_RPC_URL || "https://dream-rpc.somnia.network";
 export const SOMNIA_WS_URL = process.env.SOMNIA_WS_URL || "wss://dream-rpc.somnia.network";
 export const SOMNIA_CHAIN_ID = Number(process.env.SOMNIA_CHAIN_ID || 50312);
-export const INDEXER_URL = process.env.DREAMDEX_INDEXER_URL || "https://markets-indexer.dreamdex.io";
+export const INDEXER_URL = process.env.DREAMDEX_INDEXER_URL || "https://prd.smk.somnia.host/v1/graphql";
 
 // ─── Wallet ─────────────────────────────────────────────────────────────────
 export const PRIVATE_KEY = process.env.PRIVATE_KEY;
@@ -37,7 +37,10 @@ export const TRADE_SIZE = Number(process.env.DREAMDEX_TRADE_SIZE || 1);
 export const MIN_EXPIRY_SECONDS = Number(process.env.DREAMDEX_MIN_EXPIRY_SECONDS || 300);
 export const SLIPPAGE = Number(process.env.DREAMDEX_SLIPPAGE || 0.02);
 
+export const MM_SPREAD = Number(process.env.DREAMDEX_MM_SPREAD || 0.05);
+
 // ─── Feature flags ──────────────────────────────────────────────────────────
 export const ENABLE_FAUCET = process.env.DREAMDEX_ENABLE_FAUCET !== "false";
 export const ENABLE_TRADE = process.env.DREAMDEX_ENABLE_TRADE !== "false";
 export const ENABLE_REDEEM = process.env.DREAMDEX_ENABLE_REDEEM !== "false";
+

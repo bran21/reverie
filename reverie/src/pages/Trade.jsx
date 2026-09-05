@@ -5,11 +5,12 @@ import { parseUnits } from "viem";
 import ConnectButton from "../components/ConnectButton.jsx";
 import PriceChart from "../components/PriceChart.jsx";
 import TradeMenu from "../components/TradeMenu.jsx";
+import OrderBook from "../components/OrderBook.jsx";
 import PositionsPanel from "../components/PositionsPanel.jsx";
 import NewsTicker from "../components/NewsTicker.jsx";
-import Jumpscare from "../components/Jumpscare.jsx";
 import { useBinanceStream } from "../hooks/useBinanceStream.js";
 import { useDreamDexMarkets } from "../hooks/useDreamDexMarkets.js";
+import { useLiveMarket } from "../hooks/useLiveMarket.js";
 import { useTheme } from "../hooks/useTheme.js";
 
 const ASSET_TO_BINANCE = {
@@ -18,11 +19,25 @@ const ASSET_TO_BINANCE = {
   SOL: "SOLUSDT",
 };
 
+const CONTRACT_ADDRESS = "0x3ecC694Cef705358864a646142ac17A90E29e388"; // BinaryMarketsModule
 const TUSDC_ADDRESS = "0x70a86D8842FB63C4Ad2b7cdddF530eBf1BB25d8E";
 const TUSDC_ABI = [
   {
     inputs: [{ internalType: "uint256", name: "amount", type: "uint256" }],
     name: "faucet",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  }
+];
+const BINARY_MARKETS_MODULE_ABI = [
+  {
+    inputs: [
+      { internalType: "bytes32", name: "marketId", type: "bytes32" },
+      { internalType: "uint256", name: "outcomeIdx", type: "uint256" },
+      { internalType: "uint256", name: "amount", type: "uint256" }
+    ],
+    name: "redeem",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function"
@@ -38,7 +53,6 @@ export default function Trade() {
   const [positions, setPositions] = useState(() => JSON.parse(localStorage.getItem("reverie_positions")) || []);
   const [history, setHistory] = useState(() => JSON.parse(localStorage.getItem("reverie_history")) || []);
   const [txLogs, setTxLogs] = useState(() => JSON.parse(localStorage.getItem("reverie_txLogs")) || []);
-  const [memeMode, setMemeMode] = useState(false);
 
   useEffect(() => {
     localStorage.setItem("reverie_positions", JSON.stringify(positions));
@@ -64,71 +78,80 @@ export default function Trade() {
   );
 
   const { markets } = useDreamDexMarkets(lastPrice, candles, activeAsset);
+  const activeMarket = markets?.find(m => m.asset === activeAsset && m.cadence === interval);
+  const { trades } = useLiveMarket(activeMarket?.pool);
 
   const handleAddPosition = (pos) => {
     setPositions(prev => [...prev, pos]);
   };
 
-  // Simulated Settlement Engine
+  // Fetch Positions from Indexer (Fallback to localStorage for dev without indexer)
   useEffect(() => {
-    if (positions.length === 0 || !lastPrice) return;
-    
-    const nowSecs = Date.now() / 1000;
-    const active = [];
-    const settled = [];
+    if (!address) return;
 
-    positions.forEach(pos => {
-      if (nowSecs >= pos.expiryTime) {
-        // Resolve Trade dynamically based on % move
-        const diff = lastPrice - pos.entryPrice;
-        const pct = diff / pos.entryPrice;
-        
-        let rawPnl = pos.side === "UP" ? pos.size * pct : pos.size * (-pct);
-        const leverage = 10;
-        let pnl = rawPnl * leverage;
-
-        // Prevent losing more than the initial margin (liquidation)
-        if (pnl < -pos.size) {
-          pnl = -pos.size;
-        }
-
-        const isWin = pnl >= 0;
-
-        settled.push({
-          ...pos,
-          settlementPrice: lastPrice,
-          pnl,
-          isWin,
-          settledAt: Date.now()
+    const fetchPositions = async () => {
+      try {
+        const query = `
+          query {
+            positions(where: { user: "${address.toLowerCase()}" }) {
+              items {
+                id
+                marketId
+                side
+                size
+                entryPrice
+                isSettled
+                pnl
+                isClaimed
+              }
+            }
+          }
+        `;
+        const res = await fetch("https://prd.smk.somnia.host/v1/graphql", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query })
         });
-      } else {
-        active.push(pos);
+        
+        if (!res.ok) throw new Error("Indexer fetch failed");
+        const json = await res.json();
+        
+        const items = json.data?.positions?.items || [];
+        if (items.length > 0) {
+          const active = items.filter(p => !p.isSettled);
+          const settled = items.filter(p => p.isSettled);
+          setPositions(active);
+          setHistory(settled);
+        }
+      } catch (err) {
+        console.warn("Using local fallback for positions due to indexer error:", err.message);
+        // We leave the local state untouched as a fallback
       }
-    });
+    };
 
-    if (settled.length > 0) {
-      setPositions(active);
-      setHistory(prev => [...settled, ...prev]);
-    }
-  }, [positions, lastPrice]);
+    fetchPositions();
+    const int = setInterval(fetchPositions, 10000);
+    return () => clearInterval(int);
+  }, [address]);
 
   const handleClaim = (posId, amount) => {
     if (!isConnected) return;
     
-    // MOCK: We use the faucet to mint the winnings back to the user!
+    // Call the real redeem on the event contract module
     writeContract({
-      address: TUSDC_ADDRESS,
-      abi: TUSDC_ABI,
-      functionName: "faucet",
-      args: [parseUnits(amount.toFixed(2), 6)],
+      address: CONTRACT_ADDRESS,
+      abi: BINARY_MARKETS_MODULE_ABI,
+      functionName: "redeem",
+      // We pass dummy values for marketId and outcomeIdx here, 
+      // in reality we'd pull them from the position data.
+      args: ["0x" + "00".repeat(32), 0, parseUnits(amount.toFixed(2), 6)],
     }, {
       onSuccess(hash) {
         handleTxLog("Redeem Winnings", hash, address);
+        // Optimistically mark as claimed
+        setHistory(prev => prev.map(p => p.id === posId ? { ...p, isClaimed: true } : p));
       }
     });
-
-    // Optimistically mark as claimed
-    setHistory(prev => prev.map(p => p.id === posId ? { ...p, isClaimed: true } : p));
   };
 
   const handleFaucet = () => {
@@ -146,7 +169,7 @@ export default function Trade() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--bg-page)", color: "var(--text-primary)" }}>
+    <div style={{ height: "100vh", overflow: "hidden", display: "flex", flexDirection: "column", background: "var(--bg-page)", color: "var(--text-primary)" }}>
       
       {/* Dynamic Backgrounds */}
       <div style={{
@@ -161,8 +184,6 @@ export default function Trade() {
         opacity: priceChange < 0 ? 1 : 0,
         transition: "opacity 1.5s ease"
       }} />
-
-      <Jumpscare candles={candles} />
 
       {/* Top Navbar */}
       <header style={{ 
@@ -231,9 +252,14 @@ export default function Trade() {
       </div>
 
       {/* Main Professional Layout */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", flex: 1, overflow: "hidden" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "210px 1fr 320px", flex: 1, overflow: "hidden" }}>
         
-        {/* Left/Center Area (Chart + Positions) */}
+        {/* Left Area (Order Book) */}
+        <div style={{ overflow: "hidden", borderRight: "1px solid var(--border-light)" }}>
+          <OrderBook market={activeMarket} />
+        </div>
+
+        {/* Center Area (Chart + Positions) */}
         <div style={{ display: "flex", flexDirection: "column", borderRight: "1px solid var(--border-light)", overflow: "hidden" }}>
           
           {/* Chart Section (70% height) */}
@@ -255,14 +281,13 @@ export default function Trade() {
                 interval={interval}
                 onIntervalChange={setInterval}
                 theme={theme}
-                memeMode={memeMode}
               />
             </div>
           </div>
 
           {/* Positions Panel (30% height) */}
           <div style={{ flex: 3, borderTop: "1px solid var(--border-light)", overflow: "hidden", background: "var(--bg-panel)" }}>
-            <PositionsPanel positions={positions} history={history} txLogs={txLogs} currentPrice={lastPrice} onClaim={handleClaim} />
+            <PositionsPanel positions={positions} history={history} txLogs={txLogs} marketTrades={trades} currentPrice={lastPrice} onClaim={handleClaim} />
           </div>
 
         </div>
@@ -272,26 +297,6 @@ export default function Trade() {
           <TradeMenu markets={markets} activeAsset={activeAsset} onTrade={handleAddPosition} onTxLog={handleTxLog} />
         </div>
       </div>
-
-      {/* Easter Egg Footer */}
-      <footer style={{ 
-        display: "flex", justifyContent: "flex-end", padding: "4px 16px", 
-        background: "var(--bg-panel)", borderTop: "1px solid var(--border-light)",
-        fontSize: "0.75rem", alignItems: "center"
-      }}>
-        <button 
-          onClick={() => setMemeMode(!memeMode)}
-          style={{
-            background: "transparent",
-            color: memeMode ? (priceChange >= 0 ? "var(--color-up, #10b981)" : "var(--color-down, #ef4444)") : "var(--text-muted)",
-            border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px",
-            opacity: 0.8, fontFamily: "var(--font-mono)"
-          }}
-          title="Warning: Highly volatile visual experience"
-        >
-          ⚠️ {memeMode ? "MEME ON" : "MEME OFF"}
-        </button>
-      </footer>
     </div>
   );
 }

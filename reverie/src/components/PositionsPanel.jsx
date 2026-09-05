@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { playWinSound, playLossSound } from "../utils/audio.js";
 
-export default function PositionsPanel({ positions = [], history = [], txLogs = [], currentPrice = 0, onClaim }) {
+export default function PositionsPanel({ positions = [], history = [], txLogs = [], marketTrades = [], currentPrice = 0, onClaim }) {
   const [activeTab, setActiveTab] = useState("positions");
   const [now, setNow] = useState(Date.now() / 1000);
   const [hoveredRow, setHoveredRow] = useState(null);
@@ -15,6 +15,7 @@ export default function PositionsPanel({ positions = [], history = [], txLogs = 
   const tabs = [
     { id: "positions", label: `Positions (${positions.length})` },
     { id: "openOrders", label: "Open Orders (0)" },
+    { id: "recentTrades", label: "Recent Trades" },
     { id: "history", label: `History (${history.length})` },
     { id: "txlog", label: "Transaction Log" },
   ];
@@ -63,12 +64,17 @@ export default function PositionsPanel({ positions = [], history = [], txLogs = 
               </div>
             ) : (
               positions.map(pos => {
+                // Safely parse numbers in case localStorage has corrupted string types
+                const sizeNum = Number(pos.size) || 0;
+                const entryNum = Number(pos.entryPrice) || 0;
+                const expiryTime = Number(pos.expiryTime) || 0;
+                
                 // Simulated PNL calculation
-                const diff = currentPrice - pos.entryPrice;
+                const diff = (currentPrice || 0) - entryNum;
                 let rawPnl = 0;
-                if (pos.entryPrice > 0) {
-                  const pct = diff / pos.entryPrice;
-                  rawPnl = pos.side === "UP" ? pos.size * pct : pos.size * (-pct);
+                if (entryNum > 0) {
+                  const pct = diff / entryNum;
+                  rawPnl = pos.side === "UP" ? sizeNum * pct : sizeNum * (-pct);
                 }
                 
                 // Boost PNL for visual hackathon effect (e.g. leverage effect)
@@ -76,16 +82,16 @@ export default function PositionsPanel({ positions = [], history = [], txLogs = 
                 let pnl = rawPnl * leverage;
 
                 // Prevent losing more than initial margin
-                if (pnl < -pos.size) {
-                  pnl = -pos.size;
+                if (pnl < -sizeNum) {
+                  pnl = -sizeNum;
                 }
 
-                const roe = (pnl / pos.size) * 100;
+                const roe = sizeNum > 0 ? (pnl / sizeNum) * 100 : 0;
                 
                 const isProfit = pnl >= 0;
                 const pnlColor = isProfit ? "var(--color-success)" : "var(--color-danger)";
 
-                const timeLeft = Math.max(0, pos.expiryTime - now);
+                const timeLeft = Math.max(0, expiryTime - now);
                 const mins = Math.floor(timeLeft / 60);
                 const secs = Math.floor(timeLeft % 60);
                 const timeStr = `${mins}:${secs.toString().padStart(2, "0")}`;
@@ -102,9 +108,9 @@ export default function PositionsPanel({ positions = [], history = [], txLogs = 
                       </span>
                       {pos.symbol}
                     </div>
-                    <div style={{ flex: 1, textAlign: "right", fontFamily: "var(--font-mono)" }}>{pos.size.toFixed(2)}</div>
-                    <div style={{ flex: 1, textAlign: "right", fontFamily: "var(--font-mono)" }}>${pos.entryPrice.toFixed(2)}</div>
-                    <div style={{ flex: 1, textAlign: "right", fontFamily: "var(--font-mono)", color: "var(--color-accent)" }}>${currentPrice.toFixed(2)}</div>
+                    <div style={{ flex: 1, textAlign: "right", fontFamily: "var(--font-mono)" }}>{sizeNum.toFixed(2)}</div>
+                    <div style={{ flex: 1, textAlign: "right", fontFamily: "var(--font-mono)" }}>${entryNum.toFixed(2)}</div>
+                    <div style={{ flex: 1, textAlign: "right", fontFamily: "var(--font-mono)", color: "var(--color-accent)" }}>${(currentPrice || 0).toFixed(2)}</div>
                     <div style={{ flex: 1, textAlign: "right", fontFamily: "var(--font-mono)" }}>{timeStr}</div>
                     <div style={{ flex: 1, textAlign: "right", fontFamily: "var(--font-mono)", color: pnlColor, fontWeight: 600 }}>
                       {isProfit ? "+" : ""}{pnl.toFixed(2)} ({isProfit ? "+" : ""}{roe.toFixed(2)}%)
@@ -133,9 +139,14 @@ export default function PositionsPanel({ positions = [], history = [], txLogs = 
               </div>
             ) : (
               history.map(pos => {
+                const sizeNum = Number(pos.size) || 0;
+                const pnlNum = Number(pos.pnl) || 0;
+                const entryNum = Number(pos.entryPrice) || 0;
+                const settledNum = Number(pos.settlementPrice) || 0;
+
                 const payoutColor = pos.isWin ? "var(--color-success)" : "var(--color-danger)";
-                const payoutText = pos.isWin ? `+${(pos.pnl + pos.size).toFixed(2)} tUSDC` : `-${pos.size.toFixed(2)} tUSDC`;
-                const payoutAmount = pos.pnl + pos.size;
+                const payoutText = pos.isWin ? `+${(pnlNum + sizeNum).toFixed(2)} tUSDC` : `-${sizeNum.toFixed(2)} tUSDC`;
+                const payoutAmount = pnlNum + sizeNum;
 
                 return (
                   <div 
@@ -167,9 +178,9 @@ export default function PositionsPanel({ positions = [], history = [], txLogs = 
                         {pos.symbol}
                       </span>
                     </div>
-                    <div style={{ flex: 1, textAlign: "right", fontFamily: "var(--font-mono)", color: hoveredRow === pos.id ? "var(--text-inverse)" : "inherit" }}>{pos.size.toFixed(2)}</div>
-                    <div style={{ flex: 1, textAlign: "right", fontFamily: "var(--font-mono)", color: hoveredRow === pos.id ? "var(--text-inverse)" : "inherit" }}>${pos.entryPrice.toFixed(2)}</div>
-                    <div style={{ flex: 1, textAlign: "right", fontFamily: "var(--font-mono)", color: hoveredRow === pos.id ? "var(--text-inverse)" : "inherit" }}>${pos.settlementPrice.toFixed(2)}</div>
+                    <div style={{ flex: 1, textAlign: "right", fontFamily: "var(--font-mono)", color: hoveredRow === pos.id ? "var(--text-inverse)" : "inherit" }}>{sizeNum.toFixed(2)}</div>
+                    <div style={{ flex: 1, textAlign: "right", fontFamily: "var(--font-mono)", color: hoveredRow === pos.id ? "var(--text-inverse)" : "inherit" }}>${entryNum.toFixed(2)}</div>
+                    <div style={{ flex: 1, textAlign: "right", fontFamily: "var(--font-mono)", color: hoveredRow === pos.id ? "var(--text-inverse)" : "inherit" }}>${settledNum.toFixed(2)}</div>
                     <div style={{ flex: 1, textAlign: "right", fontWeight: 700, color: hoveredRow === pos.id ? "var(--text-inverse)" : payoutColor }}>{pos.isWin ? "WIN" : "LOSS"}</div>
                     <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "8px", fontFamily: "var(--font-mono)", color: hoveredRow === pos.id ? "var(--text-inverse)" : payoutColor, fontWeight: 600 }}>
                       <span>{payoutText}</span>
@@ -246,6 +257,37 @@ export default function PositionsPanel({ positions = [], history = [], txLogs = 
                     </div>
                     <div style={{ flex: 1.5, fontFamily: "var(--font-mono)", color: "var(--text-secondary)" }}>{walletShort}</div>
                     <div style={{ flex: 1, textAlign: "right", color: "var(--text-muted)", fontSize: "0.75rem" }}>{timeStr}</div>
+                  </div>
+                );
+              })
+            )}
+          </>
+        )}
+        
+        {activeTab === "recentTrades" && (
+          <>
+            <div style={{ display: "flex", padding: "8px var(--space-md)", fontSize: "0.7rem", color: "var(--text-muted)", borderBottom: "1px solid var(--border-light)" }}>
+              <div style={{ flex: 1 }}>Time</div>
+              <div style={{ flex: 1.5 }}>Price</div>
+              <div style={{ flex: 1, textAlign: "right" }}>Size</div>
+            </div>
+            
+            {marketTrades.length === 0 ? (
+              <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", fontSize: "0.8rem", padding: "32px 0" }}>
+                No recent trades in this market.
+              </div>
+            ) : (
+              marketTrades.slice(0, 50).map((trade, i) => {
+                const timeStr = new Date(Number(trade.timestamp) * 1000).toLocaleTimeString();
+                const price = (Number(trade.price) / 1e6).toFixed(2);
+                const size = (Number(trade.quantity) / 1e6).toFixed(0);
+                const sideColor = trade.side === "BUY" ? "var(--color-up)" : "var(--color-down)";
+
+                return (
+                  <div key={i} style={{ display: "flex", padding: "8px var(--space-md)", fontSize: "0.8rem", borderBottom: "1px solid var(--border-light)", alignItems: "center" }}>
+                    <div style={{ flex: 1, color: "var(--text-muted)", fontSize: "0.75rem" }}>{timeStr}</div>
+                    <div style={{ flex: 1.5, fontFamily: "var(--font-mono)", color: sideColor, fontWeight: 600 }}>${price}</div>
+                    <div style={{ flex: 1, textAlign: "right", fontFamily: "var(--font-mono)" }}>{size}</div>
                   </div>
                 );
               })

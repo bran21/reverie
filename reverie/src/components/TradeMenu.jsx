@@ -1,26 +1,12 @@
 import { useState, useEffect } from "react";
 import { useWriteContract, useReadContract, useAccount } from "wagmi";
-import { parseUnits, formatUnits } from "viem";
+import { parseUnits, formatUnits, maxUint256 } from "viem";
+import { useTrader } from "../hooks/useTrader.js";
 
 const CONTRACT_ADDRESS = "0x3ecC694Cef705358864a646142ac17A90E29e388"; // BinaryMarketsModule
 const TUSDC_ADDRESS = "0x70a86D8842FB63C4Ad2b7cdddF530eBf1BB25d8E";
 
-const BINARY_MARKETS_MODULE_ABI = [
-  {
-    inputs: [
-      { internalType: "bytes32", name: "marketId", type: "bytes32" },
-      { internalType: "enum OrderType", name: "orderType", type: "uint8" },
-      { internalType: "enum OrderSide", name: "side", type: "uint8" },
-      { internalType: "uint256", name: "quantity", type: "uint256" },
-      { internalType: "uint256", name: "price", type: "uint256" },
-      { internalType: "enum TimeInForce", name: "tif", type: "uint8" }
-    ],
-    name: "createOrder",
-    outputs: [{ internalType: "uint256", name: "orderId", type: "uint256" }],
-    stateMutability: "nonpayable",
-    type: "function",
-  }
-];
+
 
 const TUSDC_ABI = [
   {
@@ -28,6 +14,26 @@ const TUSDC_ABI = [
     name: "balanceOf",
     outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
     stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [
+      { internalType: "address", name: "owner", type: "address" },
+      { internalType: "address", name: "spender", type: "address" }
+    ],
+    name: "allowance",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [
+      { internalType: "address", name: "spender", type: "address" },
+      { internalType: "uint256", name: "amount", type: "uint256" }
+    ],
+    name: "approve",
+    outputs: [{ internalType: "bool", name: "", type: "bool" }],
+    stateMutability: "nonpayable",
     type: "function"
   },
   {
@@ -55,6 +61,7 @@ const VAULT_ADDRESS = "0x000000000000000000000000000000000000dEaD";
 export default function TradeMenu({ markets, activeAsset, onTrade, onTxLog }) {
   const { address, isConnected } = useAccount();
   const { writeContract, isPending } = useWriteContract();
+  const { placeBinaryLimit, isPending: traderPending } = useTrader();
   
   // Fetch Balance
   const { data: balanceData, refetch: refetchBalance } = useReadContract({
@@ -68,10 +75,25 @@ export default function TradeMenu({ markets, activeAsset, onTrade, onTxLog }) {
     }
   });
 
-  const [selectedCadence, setSelectedCadence] = useState("5m");
-  const [size, setSize] = useState("10.0"); 
+  // Fetch Allowance
+  const { data: allowanceData, refetch: refetchAllowance } = useReadContract({
+    address: TUSDC_ADDRESS,
+    abi: TUSDC_ABI,
+    functionName: "allowance",
+    args: [address, CONTRACT_ADDRESS],
+    query: {
+      enabled: !!address,
+      refetchInterval: 5000
+    }
+  });
 
-  const activeMarket = markets.find(m => m.cadence === selectedCadence) || markets[0];
+  const assetMarkets = markets.filter(m => m.asset === activeAsset);
+  const availableCadences = [...new Set(assetMarkets.map(m => m.cadence))];
+  const [selectedCadence, setSelectedCadence] = useState("15m");
+  const [size, setSize] = useState("10.0"); 
+  const [mockPending, setMockPending] = useState(false);
+
+  const activeMarket = assetMarkets.find(m => m.cadence === selectedCadence) || assetMarkets[0];
   
   if (!activeMarket) return null;
 
@@ -85,41 +107,88 @@ export default function TradeMenu({ markets, activeAsset, onTrade, onTxLog }) {
     ? Number(formatUnits(balanceData, 6)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     : "0.00";
 
-  const handleTrade = (sideName) => {
+  let qtyUnits = 0n;
+  try {
+    qtyUnits = parseUnits(size.toString() || "0", 6);
+  } catch (e) {
+    // Ignore invalid partial inputs like "10." or ""
+  }
+  const isApproved = allowanceData !== undefined && allowanceData >= qtyUnits;
+
+  const isCurrentlyPending = isPending || mockPending || traderPending;
+
+  const handleApprove = () => {
+    writeContract({
+      address: TUSDC_ADDRESS,
+      abi: TUSDC_ABI,
+      functionName: "approve",
+      args: [CONTRACT_ADDRESS, maxUint256],
+      gas: 100000n, // Skip viem's gas estimation
+    }, {
+      onSuccess(hash) {
+        if (onTxLog) onTxLog("Approve tUSDC", hash, address);
+      },
+      onError(err) {
+        console.error("Wagmi Approve Error:", err);
+        alert("Approve failed to pop up: " + (err.shortMessage || err.message || err.toString()));
+      }
+    });
+  };
+
+  const handleTrade = async (sideName) => {
     if (!isConnected) {
       alert("Please connect your wallet first.");
       return;
     }
     
-    // For the hackathon demo, we simulate the complex DreamDEX EIP-712 order placement 
-    // by triggering a real on-chain transfer of the collateral (tUSDC) to a Vault.
-    // This pops MetaMask, executes on Somnia, and decreases the user's balance!
-    const qtyUnits = parseUnits(size.toString(), 6);
+    if (!isApproved) {
+      handleApprove();
+      return;
+    }
 
-    writeContract({
-      address: TUSDC_ADDRESS,
-      abi: TUSDC_ABI,
-      functionName: "transfer",
-      args: [VAULT_ADDRESS, qtyUnits],
-    }, {
-      onSuccess(hash) {
-        if (onTxLog) {
-          onTxLog(`Trade ${sideName.toUpperCase()} ${activeAsset}-${selectedCadence.toUpperCase()}`, hash, address);
-        }
+    const handleSuccess = (hash) => {
+      if (onTxLog) {
+        onTxLog(`${activeMarket.isSynthetic ? 'Mock ' : ''}Trade ${sideName.toUpperCase()} ${activeAsset}-${selectedCadence.toUpperCase()}`, hash, address);
       }
-    });
+      
+      if (onTrade) {
+        onTrade({
+          id: Math.random().toString(36).substr(2, 9),
+          symbol: `${activeAsset}-${selectedCadence.toUpperCase()}`,
+          side: sideName.toUpperCase(),
+          size: parseFloat(size),
+          entryPrice: activeMarket?.currentPrice || 0,
+          expiryTime: activeMarket?.windowEnd || (Date.now() / 1000) + 300,
+          timestamp: Date.now(),
+        });
+      }
+    };
 
-    // Optimistically record the position for the UI
-    if (onTrade) {
-      onTrade({
-        id: Math.random().toString(36).substr(2, 9),
-        symbol: `${activeAsset}-${selectedCadence.toUpperCase()}`,
-        side: sideName.toUpperCase(),
+    if (activeMarket.isSynthetic) {
+      // Mock the transaction success since real market doesn't exist
+      setMockPending(true);
+      setTimeout(() => {
+        setMockPending(false);
+        const mockHash = "0x" + Array.from({length: 64}, () => Math.floor(Math.random()*16).toString(16)).join('');
+        handleSuccess(mockHash);
+      }, 1500);
+      return;
+    }
+
+    console.log("Sending real transaction via Somnia SDK for market:", activeMarket.id);
+
+    try {
+      const hash = await placeBinaryLimit({
+        marketId: activeMarket.id,
+        side: sideName,
         size: parseFloat(size),
-        entryPrice: activeMarket?.currentPrice || 0,
-        expiryTime: activeMarket?.windowEnd || (Date.now() / 1000) + 300,
-        timestamp: Date.now(),
+        price: 0.99, // Market order (accept any price up to 0.99 on own outcome to avoid out of bounds)
+        type: "ioc"
       });
+      handleSuccess(hash);
+    } catch (err) {
+      console.error("Wagmi SDK Error:", err);
+      alert("Transaction failed: " + (err.shortMessage || err.message || err.toString()));
     }
   };
 
@@ -144,7 +213,7 @@ export default function TradeMenu({ markets, activeAsset, onTrade, onTxLog }) {
             <span className="font-mono">{timeStr} left</span>
           </div>
           <div style={{ display: "flex", gap: "4px", background: "var(--bg-page)", padding: "4px", borderRadius: "2px", border: "1px solid var(--border-light)" }}>
-            {["5m", "15m", "1h"].map(cadence => (
+            {(availableCadences.length > 0 ? availableCadences : ["15m"]).map(cadence => (
               <button
                 key={cadence}
                 onClick={() => setSelectedCadence(cadence)}
@@ -226,28 +295,44 @@ export default function TradeMenu({ markets, activeAsset, onTrade, onTxLog }) {
 
         {/* Action Buttons */}
         <div style={{ display: "flex", gap: "12px", marginTop: "auto" }}>
-          <button 
-            onClick={() => handleTrade("up")}
-            disabled={!isTrading || isPending}
-            style={{ 
-              flex: 1, padding: "12px", background: "var(--color-up)", color: "#000", border: "none", 
-              cursor: isTrading ? "pointer" : "not-allowed", fontWeight: 700, fontSize: "0.9rem",
-              opacity: isTrading ? 1 : 0.5, borderRadius: "2px"
-            }}
-          >
-            {isPending ? "SIGNING..." : "Buy / Up"}
-          </button>
-          <button 
-            onClick={() => handleTrade("down")}
-            disabled={!isTrading || isPending}
-            style={{ 
-              flex: 1, padding: "12px", background: "var(--color-down)", color: "#fff", border: "none", 
-              cursor: isTrading ? "pointer" : "not-allowed", fontWeight: 700, fontSize: "0.9rem",
-              opacity: isTrading ? 1 : 0.5, borderRadius: "2px"
-            }}
-          >
-            {isPending ? "SIGNING..." : "Sell / Down"}
-          </button>
+          {!isApproved ? (
+            <button 
+              onClick={handleApprove}
+              disabled={!isTrading || isCurrentlyPending}
+              style={{ 
+                flex: 1, padding: "12px", background: "var(--color-accent)", color: "#000", border: "none", 
+                cursor: isTrading ? "pointer" : "not-allowed", fontWeight: 700, fontSize: "0.9rem",
+                opacity: isTrading ? 1 : 0.5, borderRadius: "2px"
+              }}
+            >
+              {isCurrentlyPending ? "APPROVING..." : "Approve tUSDC"}
+            </button>
+          ) : (
+            <>
+              <button 
+                onClick={() => handleTrade("up")}
+                disabled={!isTrading || isCurrentlyPending}
+                style={{ 
+                  flex: 1, padding: "12px", background: "var(--color-up)", color: "#000", border: "none", 
+                  cursor: isTrading ? "pointer" : "not-allowed", fontWeight: 700, fontSize: "0.9rem",
+                  opacity: isTrading ? 1 : 0.5, borderRadius: "2px"
+                }}
+              >
+                {isCurrentlyPending ? "SIGNING..." : "Buy / Up"}
+              </button>
+              <button 
+                onClick={() => handleTrade("down")}
+                disabled={!isTrading || isCurrentlyPending}
+                style={{ 
+                  flex: 1, padding: "12px", background: "var(--color-down)", color: "#fff", border: "none", 
+                  cursor: isTrading ? "pointer" : "not-allowed", fontWeight: 700, fontSize: "0.9rem",
+                  opacity: isTrading ? 1 : 0.5, borderRadius: "2px"
+                }}
+              >
+                {isCurrentlyPending ? "SIGNING..." : "Sell / Down"}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

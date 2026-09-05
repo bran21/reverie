@@ -40,6 +40,9 @@ export async function getExchange() {
     wsRpcUrl: SOMNIA_WS_URL,
     privateKey: PRIVATE_KEY,
     indexerUrl: INDEXER_URL,
+    addresses: {
+      binaryModule: "0x3ecC694Cef705358864a646142ac17A90E29e388"
+    }
   });
 
   await _exchange.loadMarkets();
